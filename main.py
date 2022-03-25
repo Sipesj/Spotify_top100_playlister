@@ -3,15 +3,16 @@ import requests
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import os
-USER_ID = "316g66uwod3nsyyozmqvmdacakdu"
-os.environ["SPOTIPY_CLIENT_ID"] = "40a62237eadd40f9a307265020b55d94"
-os.environ["SPOTIPY_CLIENT_SECRET"] = "48ba3687b95540908e2a96e16d975f11"
+USER_ID = ""
+os.environ["SPOTIPY_CLIENT_ID"] = ""
+os.environ["SPOTIPY_CLIENT_SECRET"] = ""
 os.environ["SPOTIPY_REDIRECT_URI"] = "http://example.com"
 
 client_id = os.getenv("SPOTIPY_CLIENT_ID")
 client_secret = os.getenv("SPOTIPY_CLIENT_SECRET")
 redirect_uri = os.getenv("SPOTIPY_REDIRECT_URI")
 
+#requires a token file from oauth 
 with open("token.txt") as token:
     header = token.read()
 
@@ -19,11 +20,9 @@ with open("token.txt") as token:
 destination = input("What time do you want to travel to?(YYYY-MM-DD):")
 
 billboard_url = f"https://www.billboard.com/charts/hot-100/{destination}"
-
 response = requests.get(billboard_url)
 response.raise_for_status()
 billboard_contents = response.text
-
 soup = BeautifulSoup(billboard_contents, "html.parser")
 title_list = []
 
@@ -36,10 +35,10 @@ for song in songs:
     title = song.getText().strip()
     title_list.append(title)
 
-print(title_list)
+
 #----- interact with spotify
 sp = spotipy.Spotify(auth_manager=(SpotifyOAuth(client_id=client_id, client_secret=client_secret, redirect_uri=redirect_uri, scope="playlist-modify-private", show_dialog=True, cache_path="token.txt")))
-#create list of query parameters for search
+#create list of songs for query parameters for search. Obtain URIs to be added to playlist
 q_list = []
 year = destination.split("-")[0]
 for song in title_list:
@@ -47,8 +46,6 @@ for song in title_list:
     year = destination.split("-")[0]
     q = f"track:{track} year:{year}"
     q_list.append(q)
-
-print(q_list)
 uri_list = []
 for q in q_list:
     track = sp.search(q=q, type="track")
@@ -58,6 +55,7 @@ for q in q_list:
     except IndexError:
         print(f"{q} not in spotify, skipping")
 
+ #create playlist from uri list       
 playlist = sp.user_playlist_create(user=USER_ID, name=f"{destination} Billboard chart toppers", public=False)
 sp.playlist_add_items(playlist_id=playlist["id"], items=uri_list)
 
